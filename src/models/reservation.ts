@@ -33,10 +33,10 @@ export class Reservation {
   @Column()
   end!: Date;
 
-  @Column()
+  @Column({ nullable: true })
   checkIn!: Date;
 
-  @Column()
+  @Column({ nullable: true })
   checkOut!: Date;
 
   @CreateDateColumn()

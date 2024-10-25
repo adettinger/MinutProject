@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  Generated,
 } from "typeorm";
 import { Property } from "./property";
 
