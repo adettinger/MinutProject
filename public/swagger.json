@@ -1,5 +1,5 @@
 {
-	"openapi": "3.0.0",
+	"swagger": "2.0",
 	"components": {
 		"examples": {},
 		"headers": {},
@@ -15,6 +15,144 @@
 				},
 				"required": [
 					"message"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"Manager": {
+				"properties": {
+					"id": {
+						"type": "number",
+						"format": "double"
+					},
+					"AuthToken": {
+						"type": "string"
+					},
+					"propertys": {
+						"items": {
+							"$ref": "#/components/schemas/Property"
+						},
+						"type": "array"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"AuthToken",
+					"propertys",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"Property": {
+				"properties": {
+					"id": {
+						"type": "number",
+						"format": "double"
+					},
+					"name": {
+						"type": "string"
+					},
+					"managerId": {
+						"type": "number",
+						"format": "double"
+					},
+					"manager": {
+						"$ref": "#/components/schemas/Manager"
+					},
+					"reservations": {
+						"items": {
+							"$ref": "#/components/schemas/Reservation"
+						},
+						"type": "array"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"managerId",
+					"manager",
+					"reservations",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"Reservation": {
+				"properties": {
+					"id": {
+						"type": "number",
+						"format": "double"
+					},
+					"propertyId": {
+						"type": "number",
+						"format": "double"
+					},
+					"property": {
+						"$ref": "#/components/schemas/Property"
+					},
+					"guestEmail": {
+						"type": "string"
+					},
+					"guestPhone": {
+						"type": "number",
+						"format": "double"
+					},
+					"start": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"end": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"checkIn": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"checkOut": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"propertyId",
+					"property",
+					"guestEmail",
+					"guestPhone",
+					"start",
+					"end",
+					"checkIn",
+					"checkOut",
+					"createdAt",
+					"updatedAt"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -49,6 +187,64 @@
 				},
 				"security": [],
 				"parameters": []
+			}
+		},
+		"/managers": {
+			"post": {
+				"operationId": "CreateManager",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Manager"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Manager"
+				],
+				"security": [],
+				"parameters": []
+			}
+		},
+		"/managers/{AuthToken}": {
+			"get": {
+				"operationId": "GetManager",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/Manager"
+										}
+									],
+									"nullable": true
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Manager"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "AuthToken",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		}
 	},
