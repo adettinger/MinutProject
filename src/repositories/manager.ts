@@ -17,7 +17,15 @@ export const getManager = async (AuthToken: string): Promise<Manager | null> => 
     where: {
         AuthToken: AuthToken 
     }
-});
+  });
   if (!manager) return null;
   return manager;
+};
+
+// In a production environment, this endpoint would not exist. However, this endpoint makes testing possible without needing to save data
+export const getAllManagers = async (): Promise<Manager[] | null> => {
+  const managerRepository = getRepository(Manager);
+  const managers = await managerRepository.find({});
+  if (!managers) return null;
+  return managers;
 };

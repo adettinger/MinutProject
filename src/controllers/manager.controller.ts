@@ -1,8 +1,9 @@
-import { Get, Route, Tags, Post, Body, Path } from "tsoa";
+import { Get, Route, Tags, Post, Path } from "tsoa";
 import { Manager } from "../models";
 import {
   createManager,
   getManager,
+  getAllManagers
 } from "../repositories/manager";
 
 @Route("managers")
@@ -16,5 +17,10 @@ export default class ManagerController {
   @Get("/:AuthToken")
   public async getManager(@Path() AuthToken: string): Promise<Manager | null> {
     return getManager(AuthToken);
+  }
+
+  @Get("/")
+  public async getAllManagers(): Promise<Manager[] | null> {
+    return getAllManagers();
   }
 }
