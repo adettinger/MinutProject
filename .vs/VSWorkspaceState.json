@@ -1,0 +1,12 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\config",
+    "\\models",
+    "\\src",
+    "\\src\\controllers",
+    "\\src\\routes"
+  ],
+  "SelectedNode": "\\models\\reservation.ts",
+  "PreviewInSolutionExplorer": false
+}
