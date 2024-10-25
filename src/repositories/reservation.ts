@@ -1,4 +1,4 @@
-import { getRepository } from "typeorm";
+import { DeleteResult, getRepository } from "typeorm";
 import { Manager, Property, Reservation } from "../models";
 
 export interface IReservationPayload {
@@ -8,6 +8,11 @@ export interface IReservationPayload {
     GuestPhone: number;
     Start: Date;
     End: Date;
+}
+
+export interface IDeleteReservationPayload {
+    AuthToken: string;
+    ReservationId: number;
 }
 
 export const getReservations = async (AuthToken: string, PropertyId: number): Promise<Reservation[] | null> => {
@@ -28,6 +33,7 @@ export const getReservations = async (AuthToken: string, PropertyId: number): Pr
     });
     if (!manager) return null;
 
+    //get the reservation if exists
     const reservationRepository = getRepository(Reservation);
     const reservations = await reservationRepository.find({ 
         where: {
@@ -57,6 +63,7 @@ export const createReservation = async (payload: IReservationPayload): Promise<R
     });
     if (!manager) return null;
 
+    //create a new reservation
     const reservationRepository = getRepository(Reservation);
     let reservation = new Reservation();
     reservation["propertyId"] = property["id"];
@@ -67,4 +74,35 @@ export const createReservation = async (payload: IReservationPayload): Promise<R
     return reservationRepository.save({
     ...reservation,
     });
+};
+
+export const deleteReservation = async (payload: IDeleteReservationPayload): Promise<DeleteResult | null> => {
+    //Get manager
+    const managerRepository = getRepository(Manager);
+    const manager = await managerRepository.findOne({ 
+        where: {
+            AuthToken: payload["AuthToken"]
+        }
+    });
+    if (!manager) return null;
+    //get reservation
+    const reservationRepository = getRepository(Reservation);
+    const reservation = await reservationRepository.findOne({ 
+        where: {
+            id: payload["ReservationId"]
+        }
+    });
+    if (!reservation) return null;
+    //verify reservation owned by this manager
+    const propertyRepository = getRepository(Property);
+    const property = await propertyRepository.findOne({ 
+        where: {
+            id: reservation["propertyId"],
+            managerId: manager["id"],
+        },
+    });
+    if(!property) return null;
+
+    //delete reservation
+    return reservationRepository.delete(reservation["id"]);
 };

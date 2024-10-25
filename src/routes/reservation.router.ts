@@ -23,4 +23,14 @@ router.post("/", async (req, res) => {
   }
 });
 
+router.post("/delete/", async (req, res) => {
+    const controller = new ReservationController();
+    const response = await controller.deleteReservation(req.body);
+    if (!response) {
+      res.status(404).send({ message: "Failed to delete reservation" });
+    } else {
+      return res.send({ message: "Reservation deleted" });
+    }
+  });
+
 export default router;
