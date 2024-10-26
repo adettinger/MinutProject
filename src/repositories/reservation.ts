@@ -37,7 +37,7 @@ export const getReservations = async (AuthToken: string, PropertyId: number): Pr
     const reservationRepository = getRepository(Reservation);
     const reservations = await reservationRepository.find({ 
         where: {
-            id: PropertyId,
+            propertyId: PropertyId,
         },
     });
 
@@ -47,6 +47,8 @@ export const getReservations = async (AuthToken: string, PropertyId: number): Pr
 
 export const createReservation = async (payload: IReservationPayload): Promise<Reservation | null> => {
     // Check manager owns this property
+    // Not moving duplicated code to helper because property var is used later
+    //  Could move to help var and use propertyId input, but current code is safer
     const propertyRepository = getRepository(Property);
     const property = await propertyRepository.findOne({ 
         where: {
@@ -64,15 +66,39 @@ export const createReservation = async (payload: IReservationPayload): Promise<R
     if (!manager) return null;
 
     //create a new reservation
-    const reservationRepository = getRepository(Reservation);
     let reservation = new Reservation();
     reservation["propertyId"] = property["id"];
     reservation["guestEmail"] = payload["GuestEmail"];
     reservation["guestPhone"] = payload["GuestPhone"];
-    reservation["start"] = payload["Start"];
-    reservation["end"] = payload["End"];
+    reservation["start"] = new Date(payload["Start"]);
+    reservation["end"] = new Date(payload["End"]);
+
+    // Verify there are no reservation conflicts
+    const reservationRepository = getRepository(Reservation);
+    const reservations = await reservationRepository.find({ 
+        where: {
+            propertyId: property["id"],
+        },
+    });
+
+    for(var i = 0; i < reservations.length; i++) {
+        if (reservations[i]["start"] <= reservation["start"]) {
+            if (reservation["start"] < reservations[i]["end"]) {
+                // If existing reservation starts before new starts, and ends afer new starts, conflict
+                // In future, would throw specific error message
+                return null;
+            }
+        } else {
+            if (reservations[i]["start"] < reservation["end"]) {
+                // If existing reservation starts after new starts but before new ends, conflict
+                // In future, would throw specific error message
+                return null;
+            }
+        }
+    }
+    //If pass validation, save the new reservation
     return reservationRepository.save({
-    ...reservation,
+        ...reservation,
     });
 };
 
