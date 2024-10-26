@@ -5,7 +5,9 @@ import {
   createReservation,
   deleteReservation,
   IReservationPayload,
-  IDeleteReservationPayload
+  IUpdateReservationPayload,
+  checkInReservation,
+  checkOutReservation
 } from "../repositories/reservation";
 import { DeleteResult } from "typeorm";
 
@@ -23,7 +25,17 @@ export default class ReservationController {
   }
 
   @Post("/delete/")
-  public async deleteReservation(@Body() body: IDeleteReservationPayload): Promise<DeleteResult | null> {
+  public async deleteReservation(@Body() body: IUpdateReservationPayload): Promise<DeleteResult | null> {
     return deleteReservation(body);
+  }
+
+  @Post("/checkIn/")
+  public async checkInReservation(@Body() body: IUpdateReservationPayload): Promise<Reservation | null> {
+    return checkInReservation(body);
+  }
+
+  @Post("/checkOut/")
+  public async checkOutReservation(@Body() body: IUpdateReservationPayload): Promise<Reservation | null> {
+    return checkOutReservation(body);
   }
 }

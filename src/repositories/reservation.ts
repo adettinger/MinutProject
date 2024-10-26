@@ -10,17 +10,17 @@ export interface IReservationPayload {
     End: Date;
 }
 
-export interface IDeleteReservationPayload {
+export interface IUpdateReservationPayload {
     AuthToken: string;
     ReservationId: number;
 }
 
-export const getReservations = async (AuthToken: string, PropertyId: number): Promise<Reservation[] | null> => {
+export const checkPropertyOwnership = async (authToken: string, propertyId: number): Promise<Boolean | null> => {
     // Check manager owns this property
     const propertyRepository = getRepository(Property);
     const property = await propertyRepository.findOne({ 
         where: {
-            id: PropertyId,
+            id: propertyId,
         },
     });
     if (!property) return null;
@@ -28,10 +28,16 @@ export const getReservations = async (AuthToken: string, PropertyId: number): Pr
     const manager = await managerRepository.findOne({ 
         where: {
             id: property["managerId"],
-            AuthToken: AuthToken
+            AuthToken: authToken
         }
     });
     if (!manager) return null;
+    return true;
+};
+
+export const getReservations = async (AuthToken: string, PropertyId: number): Promise<Reservation[] | null> => {
+    let ownershipCheck = await checkReservationOwnership(AuthToken, PropertyId);
+    if (!ownershipCheck) return null;
 
     //get the reservation if exists
     const reservationRepository = getRepository(Reservation);
@@ -46,28 +52,12 @@ export const getReservations = async (AuthToken: string, PropertyId: number): Pr
   };
 
 export const createReservation = async (payload: IReservationPayload): Promise<Reservation | null> => {
-    // Check manager owns this property
-    // Not moving duplicated code to helper because property var is used later
-    //  Could move to help var and use propertyId input, but current code is safer
-    const propertyRepository = getRepository(Property);
-    const property = await propertyRepository.findOne({ 
-        where: {
-            id: payload["PropertyId"],
-        },
-    });
-    if(!property) return null;
-    const managerRepository = getRepository(Manager);
-    const manager = await managerRepository.findOne({ 
-        where: {
-            id: property["managerId"],
-            AuthToken: payload["AuthToken"]
-        }
-    });
-    if (!manager) return null;
+    let ownershipCheck = await checkReservationOwnership(payload["AuthToken"], payload["PropertyId"]);
+    if (!ownershipCheck) return null;
 
     //create a new reservation
     let reservation = new Reservation();
-    reservation["propertyId"] = property["id"];
+    reservation["propertyId"] = payload["PropertyId"];
     reservation["guestEmail"] = payload["GuestEmail"];
     reservation["guestPhone"] = payload["GuestPhone"];
     reservation["start"] = new Date(payload["Start"]);
@@ -77,7 +67,7 @@ export const createReservation = async (payload: IReservationPayload): Promise<R
     const reservationRepository = getRepository(Reservation);
     const reservations = await reservationRepository.find({ 
         where: {
-            propertyId: property["id"],
+            propertyId: payload["PropertyId"],
         },
     });
 
@@ -102,12 +92,12 @@ export const createReservation = async (payload: IReservationPayload): Promise<R
     });
 };
 
-export const deleteReservation = async (payload: IDeleteReservationPayload): Promise<DeleteResult | null> => {
+export const checkReservationOwnership = async (authToken: string, reservationId: number): Promise<Reservation | null> => {
     //Get manager
     const managerRepository = getRepository(Manager);
     const manager = await managerRepository.findOne({ 
         where: {
-            AuthToken: payload["AuthToken"]
+            AuthToken: authToken,
         }
     });
     if (!manager) return null;
@@ -115,20 +105,52 @@ export const deleteReservation = async (payload: IDeleteReservationPayload): Pro
     const reservationRepository = getRepository(Reservation);
     const reservation = await reservationRepository.findOne({ 
         where: {
-            id: payload["ReservationId"]
+            id: reservationId,
         }
     });
     if (!reservation) return null;
     //verify reservation owned by this manager
     const propertyRepository = getRepository(Property);
-    const property = await propertyRepository.findOne({ 
+    const property = await propertyRepository.findOne({
         where: {
             id: reservation["propertyId"],
             managerId: manager["id"],
         },
     });
     if(!property) return null;
+    return reservation;
+};
 
+export const deleteReservation = async (payload: IUpdateReservationPayload): Promise<DeleteResult | null> => {
+    const reservation = await checkReservationOwnership(payload["AuthToken"], payload["ReservationId"]);
+    if (!reservation) return null;
     //delete reservation
+    const reservationRepository = getRepository(Reservation);
     return reservationRepository.delete(reservation["id"]);
+};
+
+export const checkInReservation = async (payload: IUpdateReservationPayload): Promise<Reservation | null> => {
+    let reservation = await checkReservationOwnership(payload["AuthToken"], payload["ReservationId"]);
+    if (!reservation) return null;
+    //Cannot checkIn if already checkedIn
+    if (reservation["checkIn"]) return null;
+    //CheckIn reservation
+    const reservationRepository = getRepository(Reservation);
+    reservation["checkIn"] = new Date();
+    return reservationRepository.save({
+        ...reservation,
+    });
+};
+
+export const checkOutReservation = async (payload: IUpdateReservationPayload): Promise<Reservation | null> => {
+    let reservation = await checkReservationOwnership(payload["AuthToken"], payload["ReservationId"]);
+    if (!reservation) return null;
+    //Can only checkOut if reservation is checkedIn and not already checkedOut
+    if (!reservation["checkIn"] || reservation["checkOut"]) return null;
+    //CheckOut reservation
+    const reservationRepository = getRepository(Reservation);
+    reservation["checkOut"] = new Date();
+    return reservationRepository.save({
+        ...reservation,
+    });
 };
