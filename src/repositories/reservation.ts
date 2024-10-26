@@ -15,6 +15,7 @@ export interface IUpdateReservationPayload {
     ReservationId: number;
 }
 
+//Helper method to check that the property is owned by this manager
 export const checkPropertyOwnership = async (authToken: string, propertyId: number): Promise<Boolean | null> => {
     // Check manager owns this property
     const propertyRepository = getRepository(Property);
@@ -35,6 +36,37 @@ export const checkPropertyOwnership = async (authToken: string, propertyId: numb
     return true;
 };
 
+//Helper method to check this reservation is owned by this manager
+export const checkReservationOwnership = async (authToken: string, reservationId: number): Promise<Reservation | null> => {
+    //Get manager
+    const managerRepository = getRepository(Manager);
+    const manager = await managerRepository.findOne({ 
+        where: {
+            AuthToken: authToken,
+        }
+    });
+    if (!manager) return null;
+    //get reservation
+    const reservationRepository = getRepository(Reservation);
+    const reservation = await reservationRepository.findOne({ 
+        where: {
+            id: reservationId,
+        }
+    });
+    if (!reservation) return null;
+    //verify reservation owned by this manager
+    const propertyRepository = getRepository(Property);
+    const property = await propertyRepository.findOne({
+        where: {
+            id: reservation["propertyId"],
+            managerId: manager["id"],
+        },
+    });
+    if(!property) return null;
+    return reservation;
+};
+
+//Get reservations for this property. Must include authToken to prove manager owns this property
 export const getReservations = async (AuthToken: string, PropertyId: number): Promise<Reservation[] | null> => {
     let ownershipCheck = await checkReservationOwnership(AuthToken, PropertyId);
     if (!ownershipCheck) return null;
@@ -51,6 +83,8 @@ export const getReservations = async (AuthToken: string, PropertyId: number): Pr
     return reservations;
   };
 
+// Create a reservation for property. Must include authToken to prove manager owns this property
+// Reservation can only be created if there is no conflicting reservations at this property
 export const createReservation = async (payload: IReservationPayload): Promise<Reservation | null> => {
     let ownershipCheck = await checkReservationOwnership(payload["AuthToken"], payload["PropertyId"]);
     if (!ownershipCheck) return null;
@@ -92,35 +126,7 @@ export const createReservation = async (payload: IReservationPayload): Promise<R
     });
 };
 
-export const checkReservationOwnership = async (authToken: string, reservationId: number): Promise<Reservation | null> => {
-    //Get manager
-    const managerRepository = getRepository(Manager);
-    const manager = await managerRepository.findOne({ 
-        where: {
-            AuthToken: authToken,
-        }
-    });
-    if (!manager) return null;
-    //get reservation
-    const reservationRepository = getRepository(Reservation);
-    const reservation = await reservationRepository.findOne({ 
-        where: {
-            id: reservationId,
-        }
-    });
-    if (!reservation) return null;
-    //verify reservation owned by this manager
-    const propertyRepository = getRepository(Property);
-    const property = await propertyRepository.findOne({
-        where: {
-            id: reservation["propertyId"],
-            managerId: manager["id"],
-        },
-    });
-    if(!property) return null;
-    return reservation;
-};
-
+//Delete reservation. Must include authToken to prove manager owns this property
 export const deleteReservation = async (payload: IUpdateReservationPayload): Promise<DeleteResult | null> => {
     const reservation = await checkReservationOwnership(payload["AuthToken"], payload["ReservationId"]);
     if (!reservation) return null;
@@ -129,6 +135,8 @@ export const deleteReservation = async (payload: IUpdateReservationPayload): Pro
     return reservationRepository.delete(reservation["id"]);
 };
 
+// CheckIn reservation. Property must not already be checkedIn. Early/late checkIn is allowed
+// Must include authToken to prove manager owns this property
 export const checkInReservation = async (payload: IUpdateReservationPayload): Promise<Reservation | null> => {
     let reservation = await checkReservationOwnership(payload["AuthToken"], payload["ReservationId"]);
     if (!reservation) return null;
@@ -142,6 +150,8 @@ export const checkInReservation = async (payload: IUpdateReservationPayload): Pr
     });
 };
 
+// CheckIn reservation. Property must be already be checkedIn and not checkedout. Early/late checkOut is allowed
+// Must include authToken to prove manager owns this property
 export const checkOutReservation = async (payload: IUpdateReservationPayload): Promise<Reservation | null> => {
     let reservation = await checkReservationOwnership(payload["AuthToken"], payload["ReservationId"]);
     if (!reservation) return null;
